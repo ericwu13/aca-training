@@ -107,7 +107,6 @@ class Vgg19:
         # layer 21
         pool6 = self.add_layer(pool5, self.max_pool, 'pool6')
         
-        print(self.shapes)
         # layer 22
         fc6 = self.add_layer(pool6, self.fc_layer, 'fc6', 25088*2, 4096)
 
