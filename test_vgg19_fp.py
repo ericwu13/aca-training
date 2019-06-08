@@ -5,14 +5,14 @@ Simple tester for the vgg19_trainable
 from __future__ import print_function
 
 import tensorflow as tf
-from tensorflow.python.client import timeline
 import numpy as np
 import random
-import vgg19_bp as vgg19
 import os
 
+from tensorflow.python.client import timeline
+from model import vgg19_bp as vgg19
 
-batchSize = 128
+batchSize = 16
 stages = [(0,3), (3,6), (6,11), (11,27)]
 
 logDir = '/home/ACA/_timeline/vgg_{}_stages/'.format(str(len(stages)))

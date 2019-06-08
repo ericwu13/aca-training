@@ -93,8 +93,8 @@ class Collector:
         self.communication = []
 
     def dump(self, fileName):
-        self.avgExec = np.mean(self.avgExec, axis=0)
-        self.avgComm = np.mean(self.avgComm, axis=0)
+        self.avgExec = (np.mean(self.avgExec, axis=0, dtype=int))
+        self.avgComm = (np.mean(self.avgComm, axis=0, dtype=int))
         print(self.avgExec)
         print(self.avgComm)
 

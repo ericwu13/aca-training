@@ -3,7 +3,6 @@ Simple tester for the vgg19_trainable
 """
 
 import tensorflow as tf
-import vgg19_bp as vgg19
 import sys
 import numpy as np
 import random
@@ -13,9 +12,10 @@ from tensorflow.python.client import timeline
 from tensorflow.python.profiler import model_analyzer
 from tensorflow.python.profiler import option_builder
 from profiler import profiler
+from model import vgg19_bp as vgg19
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-MINI_BATCH = 32
+MINI_BATCH = 256
 PRINT = 0
 
 numberMachine = sys.argv[1]
@@ -95,4 +95,4 @@ with tf.device('/gpu:0'):
         collector.collectProfile(execTime, commTime)
     collector.collectProfile(totalTimeList[-1][0], totalTimeList[-1][2])
     collector.reset()
-    collector.dump("/tmp/lingvo/vgg_w{}mb{}.txt".format(numberMachine, numberMicro))
+    collector.dump("./vgg_w{}mb{}.txt".format(numberMachine, numberMicro))
