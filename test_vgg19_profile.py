@@ -15,19 +15,26 @@ from profiler import profiler
 from model import vgg19_bp as vgg19
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-MINI_BATCH = 256
+MINI_BATCH = int(sys.argv[3])
 PRINT = 0
 
 numberMachine = sys.argv[1]
-numberMicro = MINI_BATCH // (int)(sys.argv[2])
-numberStep = int(sys.argv[3])
+microBatchSize = MINI_BATCH // (int)(sys.argv[4])
+numberStep = int(sys.argv[2])
 totalTimeList = []
 
+print("===== Profiling Stats =====")
+print("Workers Num:{0:>15}".format(numberMachine))
+print("Iterations:{0:>16}".format(numberStep))
+print("BatchSize:{0:>17}".format(MINI_BATCH))
+print("MicroBatch Num:{0:>12}".format(sys.argv[4]))
+print("MicroBatch Size:{0:>11}".format(microBatchSize))
+print("===========================")
 
 with tf.device('/gpu:0'):
     options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
     run_metadata = tf.RunMetadata()
-    vgg = vgg19.Vgg19(numberMicro)
+    vgg = vgg19.Vgg19(microBatchSize)
     collector = profiler.Collector(len(vgg.layers), numberMachine)
     print(len(vgg.layers))
     stages = [(i, i+1) for i in range(len(vgg.layers))]
@@ -95,4 +102,4 @@ with tf.device('/gpu:0'):
         collector.collectProfile(execTime, commTime)
     collector.collectProfile(totalTimeList[-1][0], totalTimeList[-1][2])
     collector.reset()
-    collector.dump("result/vgg_w{}mb{}.txt".format(numberMachine, numberMicro))
+    collector.dump("_result/vgg_w{}mb{}.txt".format(numberMachine, microBatchSize))

@@ -103,23 +103,26 @@ class Vgg19:
         
         # layer 20
         pool5 = self.add_layer(conv5_4, self.max_pool, 'pool5')
-        
+
         # layer 21
-        fc6 = self.add_layer(pool5, self.fc_layer, 'fc6', 25088*8, 4096)
+        pool6 = self.add_layer(pool5, self.max_pool, 'pool6')
         
         # layer 22
+        fc6 = self.add_layer(pool6, self.fc_layer, 'fc6', 25088*4, 4096)
+
+        # layer 23
         relu6 = self.add_layer(fc6, self.relu_layer, 'relu6')
         
-        # layer 23
+        # layer 24
         fc7 = self.add_layer(relu6, self.fc_layer, 'fc7', 4096, 4096)
         
-        # layer 24
+        # layer 25
         relu7 = self.add_layer(fc7, self.relu_layer, 'relu7')
         
-        # layer 25
+        # layer 26
         fc8 = self.add_layer(relu7, self.fc_layer, 'fc8', 4096, 1000)
         
-        # layer 26
+        # layer 27
         prob = self.add_layer(fc8, tf.nn.softmax, 'prob')
         
         
@@ -244,3 +247,9 @@ class Vgg19:
         grad = [g[0] for g in grad[:2]]
         
         return grad, apply
+
+if __name__ == "__main__":
+    vgg = Vgg19(12)
+    vgg.build_single_stage(0, 28)
+    print("Params Size: {}".format(vgg.get_var_count()))
+    print("Model Size: {} MB".format(vgg.get_var_count() * 32 / 8 / 1024//1024))

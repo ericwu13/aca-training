@@ -3,10 +3,11 @@ import simplejson
 import numpy as np
 
 class Profiler:
-    def __init__(self, jsonPath, layerName):
+    def __init__(self, jsonPath, layerName=None):
         f = open(jsonPath)
         self.data = simplejson.load(f)
         self.name = layerName
+        self.called = False
         f.close()
         for event in self.data['traceEvents']:
             if 'args' in event and 'name' in event['args']:
@@ -27,9 +28,12 @@ class Profiler:
                     t.append(event['ts'])
                     t.append(event['ts']+event['dur'])
         # print("{} us".format(t))
-        return max(t) - min(t)
+        self.computeStart = min(t)
+        self.computeStop = max(t)
+        return max(0, max(t) - min(t))
 
     def getLoading(self):
+        self.called = True
         t = 0
         for event in self.data['traceEvents']:
             if 'args' in event and event['pid'] == self.loadPID:
@@ -42,21 +46,28 @@ class Profiler:
         return t
 
     def getMemcpy(self):
-        th2d = 0
-        td2h = 0
+        if not self.called:
+            self.getExecution()
+        th2d = []
+        td2h = []
         for event in self.data['traceEvents']:
             if 'args' in event:
                 if 'name' in event['args']:
                     name = event['args']['name'].split('/')
                     if 'MemcpyHtoD' in name[-1] and 'dur' in event:
-                        th2d += event['dur']
+                        th2d.append(event['ts'])
+                        th2d.append(event['ts'] + event['dur'])
                         # print("{}, {} us".format(event['args']['name'], event['dur']))
                         # print("{} us".format(th2d))
                     elif 'MemcpyDtoH' in name[-1] and 'dur' in event:
-                        td2h += event['dur']
+                        td2h.append(event['ts'])
+                        td2h.append(event['ts'] + event['dur'])
                         # print("{}, {} us".format(event['args']['name'], event['dur']))
                         # print("{} us".format(td2h))
-        return [th2d, td2h]
+        th2d = self.computeStart - min(th2d)
+        td2h = max(td2h) - self.computeStop
+        self.called = False
+        return [max(0, th2d), max(0, td2h)]
 
     def getTime(self, type):
         if type == 'exec':

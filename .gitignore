@@ -3,4 +3,5 @@
 
 *.swp
 *.txt
-result/
+_result/
+_timeline/
