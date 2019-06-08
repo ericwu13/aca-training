@@ -95,4 +95,4 @@ with tf.device('/gpu:0'):
         collector.collectProfile(execTime, commTime)
     collector.collectProfile(totalTimeList[-1][0], totalTimeList[-1][2])
     collector.reset()
-    collector.dump("./vgg_w{}mb{}.txt".format(numberMachine, numberMicro))
+    collector.dump("results/vgg_w{}mb{}.txt".format(numberMachine, numberMicro))
