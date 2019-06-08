@@ -53,8 +53,8 @@ with tf.device('/gpu:0'):
             else:
                 weightDict[name] += np.prod(layer.get_shape().as_list())
         timeList = []
-        for iter in range(numberStep):
-            print " ------ {} / {} ...\n".format(iter+1, numberStep),
+        for iter in range(numberStep+1):
+            print " ------ {} / {} ...\n".format(iter+1, numberStep+1),
             fName = '/tmp/lingvo/profileData/profileResults/vgg_layer_%d_%d.json'.format(idx, iter)
             inShape = vgg.input.shape.as_list()
             inBatch = np.random.rand(*inShape)

@@ -64,8 +64,14 @@ class Profiler:
                         td2h.append(event['ts'] + event['dur'])
                         # print("{}, {} us".format(event['args']['name'], event['dur']))
                         # print("{} us".format(td2h))
-        th2d = self.computeStart - min(th2d)
-        td2h = max(td2h) - self.computeStop
+        if(len(th2d)):
+            th2d = self.computeStart - min(th2d)
+        else:
+            th2d = 0
+        if(len(td2h)):
+            td2h = max(td2h) - self.computeStop
+        else:
+            td2h = 0
         self.called = False
         return [max(0, th2d), max(0, td2h)]
 

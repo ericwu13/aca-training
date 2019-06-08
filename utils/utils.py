@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import random
+import os
 
 from tensorflow.python.client import timeline
 from model import vgg19_bp as vgg19
@@ -10,6 +11,7 @@ from os import listdir
 from os.path import isfile
 from os.path import join as pjoin
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
 def getArgs():
@@ -82,6 +84,7 @@ class Simulator:
             ops = vgg.single_stage_bp()
 
             for iter in range(self.iters+1):
+                print " ------ {} / {} ...\n".format(iter+1, self.iters+1),
                 inShape = vgg.input.shape.as_list()
                 inBatch = np.random.rand(*inShape)
 
@@ -112,6 +115,7 @@ class Simulator:
             sess.run(tf.global_variables_initializer())
 
             for iter in range(self.iters+1):
+                print " ------ {} / {} ...\n".format(iter+1, self.iters+1),
                 inShape = vgg.input.shape.as_list()
                 inBatch = np.random.rand(*inShape)
 
