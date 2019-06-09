@@ -2,7 +2,7 @@ import os
 
 from utils import utils
 from simulator import simulator as sim
-from model import vgg19
+from model import model
 
 args = utils.getArgs()
 
@@ -25,11 +25,10 @@ for n, nts in machineDict.items():
 print("Number of Stages: {}".format(numStages))
 
 if args.model == 'vgg':
-    model = vgg19.Vgg19
+    mdl = model.Vgg19
 elif args.model == 'resnet':
-    pass
-
-s = sim.Simulator(model, args.numMicro, numStages, args.iters, logDir, machineNum)
+    mdl = model.ResNet
+s = sim.Simulator(mdl, args.numMicro, numStages, args.iters, logDir, machineNum)
 
 for n, sts in machineDict.items():
     bs = microBatchSize // n

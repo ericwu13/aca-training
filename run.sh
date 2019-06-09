@@ -7,12 +7,13 @@ LOG_DIR=$5
 MODEL=$6
 profFile="./_result/${MODEL}_w${NUM_MACHINE}mb${MICROSIZE}.txt"
 
-echo "Profile the results to $profFile"
-python profile.py -lgd ./_result -ma $NUM_MACHINE -it $ITERATION -bs $BATCHSIZE -nm $NUM_MICRO
+python profile.py -lgd ./_result -ma $NUM_MACHINE -it $ITERATION -bs $BATCHSIZE -nm $NUM_MICRO -md $MODEL
+
+echo "\nProfile the results to $profFile"
 
 ./bin/dPartitionerCore_beta $profFile 6000
 ./bin/dPartitionerDump $profFile 6000 partition.txt
 
 
-python sim.py -lgd $LOG_DIR -bs $BATCHSIZE -nm $NUM_MICRO -it $ITERATION
+python sim.py -lgd $LOG_DIR -bs $BATCHSIZE -nm $NUM_MICRO -it $ITERATION -md $MODEL
 

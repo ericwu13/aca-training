@@ -114,4 +114,4 @@ with tf.device('/gpu:0'):
         collector.collectProfile(execTime, commTime)
     collector.collectProfile(totalTimeList[-1][0], totalTimeList[-1][2])
     collector.reset()
-    collector.dump(pjoin(logDir, "{}_{}mb{}.txt".format(args.model, numberMachine, microBatchSize)))
+    collector.dump(pjoin(logDir, "{}_w{}mb{}.txt".format(args.model, numberMachine, microBatchSize)))

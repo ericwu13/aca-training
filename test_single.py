@@ -7,7 +7,7 @@ import random
 import sys
 
 from tensorflow.python.client import timeline
-from model import vgg19
+from model import model
 from utils import utils
 from os.path import join as pjoin
 
@@ -18,7 +18,9 @@ if not os.path.exists(logDir):
     os.makedirs(logDir)
 
 if args.model == 'vgg':
-    model = vgg19.Vgg19
+    mdl = model.Vgg19
+elif args.model == 'resnet':
+    mdl = model.ResNet
 
 batchSize = args.batchSize
 
@@ -28,7 +30,7 @@ with tf.device('/gpu:0'):
 
     options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
     run_metadata = tf.RunMetadata()
-    m = model(batchSize)
+    m = mdl(batchSize)
     m.build_single_stage(0, len(m.layers))
 
     sess = tf.Session()
