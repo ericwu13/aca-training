@@ -94,4 +94,9 @@ class ResNet(object):
         apply = opt.apply_gradients(zip(grad[:-1], vars))
         
         return grad[-1], apply
-
+    
+    def get_var_count(self):
+        count = 0
+        for v in tf.trainable_variables():
+            count += reduce(lambda x, y: x * y, v.get_shape().as_list())
+        return count
