@@ -1,33 +1,40 @@
 """
 Simple tester for the vgg19_trainable
 """
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 import tensorflow as tf
-import sys
 import numpy as np
 import random
-import os
 
 from tensorflow.python.client import timeline
 from tensorflow.python.profiler import model_analyzer
 from tensorflow.python.profiler import option_builder
 from profiler import profiler
 from model import vgg19_bp as vgg19
+from utils import utils
+from os.path import join as pjoin
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-MINI_BATCH = int(sys.argv[3])
+args = utils.getArgs()
+
+logDir = args.log_dir
+if not os.path.exists(logDir):
+    os.makedirs(logDir)
+
+MINI_BATCH = args.batchSize
 PRINT = 0
 
-numberMachine = sys.argv[1]
-microBatchSize = MINI_BATCH // (int)(sys.argv[4])
-numberStep = int(sys.argv[2])
+numberMachine = args.machine
+microBatchSize = MINI_BATCH // args.numMicro
+numberStep = args.iters
 totalTimeList = []
 
 print("===== Profiling Stats =====")
 print("Workers Num:{0:>15}".format(numberMachine))
 print("Iterations:{0:>16}".format(numberStep))
 print("BatchSize:{0:>17}".format(MINI_BATCH))
-print("MicroBatch Num:{0:>12}".format(sys.argv[4]))
+print("MicroBatch Num:{0:>12}".format(args.numMicro))
 print("MicroBatch Size:{0:>11}".format(microBatchSize))
 print("===========================")
 
@@ -102,4 +109,4 @@ with tf.device('/gpu:0'):
         collector.collectProfile(execTime, commTime)
     collector.collectProfile(totalTimeList[-1][0], totalTimeList[-1][2])
     collector.reset()
-    collector.dump("_result/vgg_w{}mb{}.txt".format(numberMachine, microBatchSize))
+    collector.dump(pjoin(logDir, "vgg_w{}mb{}.txt".format(numberMachine, microBatchSize)))
