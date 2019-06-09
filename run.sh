@@ -4,7 +4,8 @@ BATCHSIZE=$3
 NUM_MICRO=$4
 MICROSIZE=$((BATCHSIZE/NUM_MICRO))
 LOG_DIR=$5
-profFile="./_result/vgg_w${NUM_MACHINE}mb${MICROSIZE}.txt"
+MODEL=$6
+profFile="./_result/${MODEL}_w${NUM_MACHINE}mb${MICROSIZE}.txt"
 
 echo "Profile the results to $profFile"
 python profile.py -lgd ./_result -ma $NUM_MACHINE -it $ITERATION -bs $BATCHSIZE -nm $NUM_MICRO

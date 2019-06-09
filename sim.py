@@ -2,7 +2,7 @@ import os
 
 from utils import utils
 from simulator import simulator as sim
-from model import vgg19_bp as vgg19
+from model import vgg19
 
 args = utils.getArgs()
 

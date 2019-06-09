@@ -1,5 +1,7 @@
 import tensorflow as tf
 import tensorflow.contrib as tf_contrib
+import numpy as np
+from functools import reduce
 
 
 # Xavier : tf_contrib.layers.xavier_initializer()

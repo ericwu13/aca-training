@@ -12,7 +12,7 @@ from tensorflow.python.client import timeline
 from tensorflow.python.profiler import model_analyzer
 from tensorflow.python.profiler import option_builder
 from profiler import profiler
-from model import vgg19_bp as vgg19
+from model import model
 from utils import utils
 from os.path import join as pjoin
 
@@ -30,6 +30,11 @@ microBatchSize = MINI_BATCH // args.numMicro
 numberStep = args.iters
 totalTimeList = []
 
+if args.model == 'vgg':
+    mdl = model.Vgg19
+elif args.model == 'resnet':
+    mdl = model.ResNet
+
 print("===== Profiling Stats =====")
 print("Workers Num:{0:>15}".format(numberMachine))
 print("Iterations:{0:>16}".format(numberStep))
@@ -41,14 +46,14 @@ print("===========================")
 with tf.device('/gpu:0'):
     options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
     run_metadata = tf.RunMetadata()
-    vgg = vgg19.Vgg19(microBatchSize)
-    collector = profiler.Collector(len(vgg.layers), numberMachine)
-    print(len(vgg.layers))
-    stages = [(i, i+1) for i in range(len(vgg.layers))]
+    m = mdl(microBatchSize)
+    collector = profiler.Collector(len(m.layers), numberMachine)
+    print(len(m.layers))
+    stages = [(i, i+1) for i in range(len(m.layers))]
 
     for idx, stage in enumerate(stages):
-        print("\nProfiling for Stage {}({})".format(vgg.layerNames[idx], idx));
-        vgg.build_single_stage(*stage)
+        print("\nProfiling for Stage {}({})".format(m.layerNames[idx], idx));
+        m.build_single_stage(*stage)
         sess = tf.Session()
         sess.run(tf.global_variables_initializer())
 
@@ -62,13 +67,13 @@ with tf.device('/gpu:0'):
         timeList = []
         for iter in range(numberStep+1):
             print " ------ {} / {} ...\n".format(iter+1, numberStep+1),
-            fName = '/tmp/lingvo/profileData/profileResults/vgg_layer_%d_%d.json'.format(idx, iter)
-            inShape = vgg.input.shape.as_list()
+            fName = '/tmp/lingvo/profileData/profileResults/{}_layer_%d_%d.json'.format(args.model, idx, iter)
+            inShape = m.input.shape.as_list()
             inBatch = np.random.rand(*inShape)
-            feed_dict = {vgg.input: inBatch}
+            feed_dict = {m.input: inBatch}
             if iter == 0:
-                sessRet = sess.run(vgg.output, feed_dict=feed_dict)
-                name = vgg.layerNames[idx]
+                sessRet = sess.run(m.output, feed_dict=feed_dict)
+                name = m.layerNames[idx]
                 if name in weightDict:
                     weightSize = weightDict[name]
                 else:
@@ -80,14 +85,14 @@ with tf.device('/gpu:0'):
                     print("   ActiationSize   {}".format(activationSize))
                     print("   WeightSize      {}".format(weightSize))
             else:
-                sessRet = sess.run(vgg.output, feed_dict=feed_dict, options=options, run_metadata=run_metadata)
+                sessRet = sess.run(m.output, feed_dict=feed_dict, options=options, run_metadata=run_metadata)
                 fetched_timeline = timeline.Timeline(run_metadata.step_stats)
                 chrome_trace = fetched_timeline.generate_chrome_trace_format(show_memory=False)
                 with open(fName, 'w') as f:
                     f.write(chrome_trace)
                     f.close()
 
-                prof = profiler.Profiler(fName, vgg.layerNames[idx])
+                prof = profiler.Profiler(fName, m.layerNames[idx])
                 execTime = prof.getTime('exec')
                 memcpy = prof.getTime('memcpy')
                 timeList.append([execTime, memcpy[0], memcpy[1]])
@@ -100,13 +105,13 @@ with tf.device('/gpu:0'):
             print("   Exec       {} us".format(execTime))
             print("   MemcpyIn   {} us".format(memIn))
             print("   MemcpyOut  {} us".format(memOut))
-    assert(len(totalTimeList) == len(vgg.layers))
+    assert(len(totalTimeList) == len(m.layers))
     for idx, time in enumerate(zip(totalTimeList[:-1], totalTimeList[1:])):
-        # print("{} + {}".format(vgg.nameList[idx], vgg.nameList[idx+1]))
+        # print("{} + {}".format(m.nameList[idx], m.nameList[idx+1]))
         execTime = time[0][0]
         commTime = time[0][2] + time[1][1]
         # print(commTime)
         collector.collectProfile(execTime, commTime)
     collector.collectProfile(totalTimeList[-1][0], totalTimeList[-1][2])
     collector.reset()
-    collector.dump(pjoin(logDir, "vgg_w{}mb{}.txt".format(numberMachine, microBatchSize)))
+    collector.dump(pjoin(logDir, "{}_{}mb{}.txt".format(args.model, numberMachine, microBatchSize)))
