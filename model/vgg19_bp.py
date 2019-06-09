@@ -203,10 +203,18 @@ class Vgg19:
         
         self.input = tf.placeholder(tf.float32, self.shapes[i])
         self._output = tf.placeholder(tf.float32, self.shapes[j])
+        
+        #if isTrain:
+        #    self._input = tf.Variable(tf.zeros(self.shapes[i]), name='forplaceholder')
+        #    _in = self._input.assign(self.input)
+        #    self.tmp = _in
+        #else:
+        #    _in = self.input
+        
         _in = self.input
         
         if i == 0:
-            rgb_scaled = self.input * 255.0
+            rgb_scaled = _in * 255.0
             # Convert RGB to BGR
             red, green, blue = tf.split(axis=3, num_or_size_splits=3, value=rgb_scaled)
             assert red.get_shape().as_list()[1:] == [224*2, 224*2, 1]
@@ -242,11 +250,13 @@ class Vgg19:
             
         loss = lossFn(self._output, self.output)
         opt = tf.train.GradientDescentOptimizer(0.001)
-        grad = opt.compute_gradients(loss, self.stgVars)
-        apply = opt.apply_gradients(grad)
-        grad = [g[0] for g in grad[:2]]
+        #grad = opt.compute_gradients(loss, self.stgVars)
+        #apply = opt.apply_gradients(grad)
+        grad = tf.gradients(loss, self.stgVars+[self.input])
+        apply = opt.apply_gradients(zip(grad[:-1], self.stgVars))
+        #grad = [g[0] for g in grad[:2]]
         
-        return grad, apply
+        return grad[-1], apply
 
 if __name__ == "__main__":
     vgg = Vgg19(12)
