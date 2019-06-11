@@ -1,0 +1,9 @@
+========== Stats ==========
+iters 10
+batchSize 64
+numMicro 2
+machine 4
+log_dir _timeline/vgg
+file ./_partition/partition_4_vgg_64_2.txt
+model vgg
+===========================

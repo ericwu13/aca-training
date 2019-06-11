@@ -1,0 +1,9 @@
+========== Stats ==========
+iters 10
+batchSize 64
+numMicro 2
+machine 4
+log_dir _timeline/resnet_5g
+file ./_partition/partition_2_resnet_64_2.txt
+model resnet
+===========================
