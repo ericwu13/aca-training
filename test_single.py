@@ -21,6 +21,8 @@ if args.model == 'vgg':
     mdl = model.Vgg19
 elif args.model == 'resnet':
     mdl = model.ResNet
+elif args.model == 'resnext':
+    mdl = model.ResNeXt
 
 batchSize = args.batchSize
 
@@ -51,5 +53,11 @@ with tf.device('/gpu:0'):
             fetched_timeline = timeline.Timeline(run_metadata.step_stats)
             chrome_trace = fetched_timeline.generate_chrome_trace_format(show_memory=False)
             with open(pjoin(logDir,'single_gpu_{}.json'.format(iter)), 'w') as f:
+                f.write(chrome_trace)
+                f.close()
+            v = sess.run(tf.trainable_variables(), options=options, run_metadata=run_metadata)
+            fetched_timeline = timeline.Timeline(run_metadata.step_stats)
+            chrome_trace = fetched_timeline.generate_chrome_trace_format(show_memory=False)
+            with open(pjoin(logDir,'single_gpu_overhead_{}.json'.format(iter)), 'w') as f:
                 f.write(chrome_trace)
                 f.close()

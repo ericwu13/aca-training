@@ -32,6 +32,18 @@ class Profiler:
         self.computeStop = max(t)
         return max(0, max(t) - min(t))
 
+    def getOverHead(self):
+        t = []
+        for event in self.data['traceEvents']:
+            if event['pid'] == self.computePID:
+                if 'ts' in event and 'dur' in event:
+                    t.append(event['ts'])
+                    t.append(event['ts']+event['dur'])
+        computeStart = min(t)
+        computeStop = max(t)
+        # print(computeStop, computeStart)
+        return max(0, max(t) - min(t))
+
     def getLoading(self):
         self.called = True
         t = 0
@@ -82,6 +94,8 @@ class Profiler:
             return self.getLoading()
         elif type == 'memcpy':
             return self.getMemcpy()
+        elif type == 'overhead':
+            return self.getOverHead()
 
 class Collector:
     def __init__(self, n, m = 4):

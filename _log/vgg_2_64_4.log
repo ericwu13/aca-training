@@ -1,3 +1,13 @@
+<<<<<<< HEAD
+Reshaping [N, M] = [28,2]
+========== Partition ==========
+# of layers : 28
+# of workers: 2
+stage     layer     reps   cost
+    1   1->   7       1   249174
+    2   8->  28       1   230842
+Pipeline bottleneck cost: 249174
+=======
 ========== Stats ==========
 iters 10
 batchSize 64
@@ -7,3 +17,4 @@ log_dir _timeline/vgg
 file ./_partition/partition_2_vgg_64_4.txt
 model vgg
 ===========================
+>>>>>>> 159326b283c2f9476111678d6a824d883a9eaaab

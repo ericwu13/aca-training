@@ -1,0 +1,9 @@
+========== Stats ==========
+iters 10
+batchSize 64
+numMicro 4
+machine 4
+log_dir _timeline/vgg_3mp
+file .txt
+model vgg
+===========================

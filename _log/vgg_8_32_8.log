@@ -1,3 +1,12 @@
+<<<<<<< HEAD
+Reshaping [N, M] = [28,8]
+========== Partition ==========
+# of layers : 28
+# of workers: 8
+stage     layer     reps   cost
+    1   1->  28       8  23750.8
+Pipeline bottleneck cost: 23750.8
+=======
 ========== Stats ==========
 iters 10
 batchSize 32
@@ -86,3 +95,4 @@ BP for each step:  [132330, 132330, 132330, 132330, 132330, 132330, 132330, 1323
 Time without overhead: 1.383192 s
 
 Total Time: 1.658705 s
+>>>>>>> 159326b283c2f9476111678d6a824d883a9eaaab

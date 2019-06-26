@@ -28,6 +28,9 @@ if args.model == 'vgg':
     mdl = model.Vgg19
 elif args.model == 'resnet':
     mdl = model.ResNet
+elif args.model == 'resnext':
+    mdl = model.ResNeXt
+
 s = sim.Simulator(mdl, args.numMicro, numStages, args.iters, logDir, machineNum)
 
 for n, sts in machineDict.items():
