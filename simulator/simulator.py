@@ -26,6 +26,20 @@ def getProfile(name, numStages, iters, logDir):
     assert(len(stagesMeanList[0]) == 3)
     return stagesMeanList
 
+def getOverHead(numStages, iters, logDir):
+    stagesMeanList = []
+    for m in range(numStages):
+        timeList = []
+        for i in range(iters):
+            f = pjoin(logDir, 'dp_overhead_{}_{}.json'.format(m, i+1))
+            prof = profiler.Profiler(f)
+            execTime = 2 * prof.getTime('overhead')
+            print(execTime/2.)
+            timeList.append(execTime)
+        stagesMeanList.append(np.mean(timeList, dtype=int))
+    print(stagesMeanList)
+    return stagesMeanList
+
 class Simulator:
     def __init__(self, model, numMicro, numStages, iters, logDir, machineNum):
         self.model = model
@@ -66,6 +80,12 @@ class Simulator:
                     with open(pjoin(self.logDir,'bp_stage_{}_{}.json'.format(stage[0], iter)), 'w') as f:
                         f.write(chrome_trace)
                         f.close()
+                    v = sess.run(tf.trainable_variables(), options=options, run_metadata=run_metadata)
+                    fetched_timeline = timeline.Timeline(run_metadata.step_stats)
+                    chrome_trace = fetched_timeline.generate_chrome_trace_format(show_memory=False)
+                    with open(pjoin(self.logDir,'dp_overhead_{}_{}.json'.format(stage[0], iter)), 'w') as f:
+                        f.write(chrome_trace)
+                        f.close()
 
     def runFP(self, batchSize, stage):
         # print(stage)
@@ -96,14 +116,18 @@ class Simulator:
         # calculate fp and bp execution, communication time
         fpFiles = [f for f in listdir(self.logDir) if 'fp_stage' in f and isfile(pjoin(self.logDir, f))]
         bpFiles = [f for f in listdir(self.logDir) if 'bp_stage' in f and isfile(pjoin(self.logDir, f))]
+        ohFiles = [f for f in listdir(self.logDir) if 'dp_overhead' in f and isfile(pjoin(self.logDir, f))]
 
 
         fpMeanList = getProfile('fp_stage', self.numStages, self.iters, self.logDir)
         bpMeanList = getProfile('bp_stage', self.numStages, self.iters, self.logDir)
+        ohMeanList = getOverHead(self.numStages, self.iters, self.logDir)
         print("\nMean FP TimeList")
         print(fpMeanList)
         print("\nMean BP TimeList")
         print(bpMeanList)
+        print("\nMean DPOH TimeList")
+        print(ohMeanList)
 
         fT  = []
         for idx, time in enumerate(zip(fpMeanList[:-1], fpMeanList[1:])):
@@ -155,7 +179,14 @@ class Simulator:
         print "\nBP for each step: ",
         print(finalBP)
 
-        print("\nTotal Time: {} s".format((fp+bp)/10**6.))
+        finalTime = fp + bp
+        print("Time without overhead: {} s".format(finalTime / 10**6.))
+
+        for idx, dp in enumerate(self.machineNum):
+            if( dp > 1 ):
+                finalTime += ohMeanList[idx]
+
+        print("\nTotal Time: {} s".format(finalTime/10**6.))
 
 if __name__ == "__main__":
     sim = Simulator(16, 4, 10, '_timeline/vgg')

@@ -34,6 +34,8 @@ if args.model == 'vgg':
     mdl = model.Vgg19
 elif args.model == 'resnet':
     mdl = model.ResNet
+elif args.model == 'resnext':
+    mdl = model.ResNeXt
 
 print("===== Profiling Stats =====")
 print("Workers Num:{0:>15}".format(numberMachine))

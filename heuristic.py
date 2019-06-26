@@ -22,10 +22,15 @@ tt = t
 part = [[] for _ in range(nm)]
 for j in x:
     s += j
-    part[k].append(j)
     if s >= tt:
+        if (s-tt) <= (tt-s+j):
+            part[k].append(j)
+        else:
+            part[k+1].append(j)
         k += 1
         tt += t
+    else:
+        part[k].append(j)
 
 with open(argv[3], 'w') as fp:
     i = 0

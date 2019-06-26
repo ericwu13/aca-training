@@ -1,0 +1,7 @@
+Reshaping [N, M] = [28,8]
+========== Partition ==========
+# of layers : 28
+# of workers: 8
+stage     layer     reps   cost
+    1   1->  28       8  43780.2
+Pipeline bottleneck cost: 43780.2

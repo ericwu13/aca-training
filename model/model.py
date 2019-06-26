@@ -252,6 +252,7 @@ class Vgg19:
         #grad = [g[0] for g in grad[:2]]
         
         return grad[-1], apply
+
 class ResNet(object):
     def __init__(self, batch_size):
         self.model_name = 'ResNet'
@@ -268,20 +269,20 @@ class ResNet(object):
         self.args = []
         
         self.initShapes()
-        
+
     def initShapes(self):
         with tf.variable_scope("network", reuse=False):
-        
+
             x = tf.placeholder(tf.float32, [self.batch_size, self.img_size, self.img_size, self.c_dim])
             self.shapes.append(x.shape.as_list())
-            
+
             if self.res_n < 50 :
                 residual_block = resblock
             else :
                 residual_block = bottle_resblock
             residual_list = get_residual_layer(self.res_n)
-            ch = 64 # paper is 64
-            
+            ch = 192 # paper is 64
+
             x = self.add_layer(x, conv, 'conv', ch, 3, 1)
 
             for i in range(residual_list[0]):
@@ -291,7 +292,7 @@ class ResNet(object):
 
             for i in range(1, residual_list[1]):
                 x = self.add_layer(x, residual_block, 'resblock1_'+str(i), ch*2, False)
-            
+
             x = self.add_layer(x, residual_block, 'resblock2_0', ch*4, True)
 
             for i in range(1, residual_list[2]):
@@ -308,6 +309,218 @@ class ResNet(object):
             x = self.add_layer(x, fully_conneted, 'logit', self.label_dim)
 
             return x
+
+    def add_layer(self, input, layer, name, *args):
+        args = list(args)
+        args.append(name)
+        self.layers.append(layer)
+        self.layerNames.append(name)
+        self.args.append(args)
+        output = layer(input, *args)
+        self.shapes.append(output.shape.as_list())
+        return output
+
+    def build_single_stage(self, i, j):   # this stage spans from layer i to j
+        assert (0 <= i) and (i < j) and (j <= len(self.layers))
+        tf.reset_default_graph()
+        self.isLast = (j == len(self.layers))
+        
+        self.input = tf.placeholder(tf.float32, self.shapes[i])
+        self._output = tf.placeholder(tf.float32, self.shapes[j])
+        
+        _in = self.input
+        
+        for k in range(i, j):
+            _in = self.layers[k](_in, *self.args[k])
+            
+        self.output = _in
+
+    def single_stage_bp(self):
+        def myloss(g, a):
+            return 0.5 * tf.math.multiply(tf.math.square(a), g)
+        lossFn = classification_loss if self.isLast else myloss
+            
+        loss = lossFn(self._output, self.output)
+        opt = tf.train.GradientDescentOptimizer(0.001)
+        vars = tf.trainable_variables()
+        grad = tf.gradients(loss, vars+[self.input])
+        apply = opt.apply_gradients(zip(grad[:-1], vars))
+        
+        return grad[-1], apply
+
+    def get_var_count(self):
+        count = 0
+        for v in tf.trainable_variables():
+            count += reduce(lambda x, y: x * y, v.get_shape().as_list())
+        return count
+
+class ResNeXt:
+    def __init__(self, batchSize):
+        self.batchSize = batchSize
+        self.imgSize = 448
+        self.cDim = 3
+        self.num_classes = 1000
+
+        self.data_format = 'channels_last'
+
+        self.block_list = [4*5, 6*5, 6*5, 2*5, 2*5]
+        self.filters_list = [16*2*(2**i) for i in range(1, 6)]
+        self.cardinality = 4
+        self.is_SENet = True
+        self.reduction = 16*2
+
+        self.is_training = True
+
+        self.shapes = []
+        self.layers = []
+        self.layerNames = []
+        self.args = []
+        self.initShapes()
+
+    def initShapes(self):
+        with tf.variable_scope('SENet'):
+            x = tf.placeholder(dtype=tf.float32, shape=[self.batchSize, self.imgSize, self.imgSize, self.cDim], name='images')
+            self.shapes.append(x.shape.as_list())
+            
+            #labels = tf.placeholder(dtype=tf.int32, shape=[self.batchSize, self.num_classes], name='labels')
+            
+            x = self.add_layer(x, self._conv_bn_activation, 'conv1_1', 16*2*2, 3, 1, tf.nn.relu)
+            x = self.add_layer(x, self._max_pooling, 'pool1', 3, 2)
+            
+            for i in range(self.block_list[0]):
+                x = self.add_layer(x, self._residual_bottleneck, 'block1_unit'+str(i+1), self.filters_list[0], 1, tf.nn.relu)
+
+            for i in range(1, len(self.block_list)-1):
+                x = self.add_layer(x, self._residual_bottleneck, 'block'+str(i+1)+'_unit'+str(1), self.filters_list[i], 2, tf.nn.relu)
+                for j in range(1, self.block_list[i]):
+                    x = self.add_layer(x, self._residual_bottleneck, 'block'+str(i+1)+'_unit'+str(j+1), self.filters_list[i], 1, tf.nn.relu)
+            x = self.add_layer(x, self._residual_bottleneck, 'block'+str(len(self.block_list))+'_unit'+str(1), self.filters_list[-1], 2, tf.nn.relu)
+
+            for j in range(1, self.block_list[-1]-1):
+                x = self.add_layer(x, self._residual_bottleneck, 'block'+str(len(self.block_list))+'_unit'+str(j+1), self.filters_list[-1], 1, tf.nn.relu)
+            x = self.add_layer(x, self._residual_bottleneck, 'block'+str(len(self.block_list))+'_unit'+str(self.block_list[-1]), self.filters_list[-1], 1, None)
+            
+            x = self.add_layer(x, self._bn, 'bn_1')
+            x = self.add_layer(x, self._relu, 'relu_1')
+
+            axes = [1, 2] if self.data_format == 'channels_last' else [2, 3]
+            x = self.add_layer(x, self._reduce_mean, 'global_pool', axes)
+            x = self.add_layer(x, self._dense, 'final_dense')
+            #x = self.add_layer(x, self._softmax, 'logit')
+            
+    
+    def _softmax(self, bottom, name):
+        return tf.nn.softmax(bottom, name=name)
+    
+    def _dense(self, bottom, name):
+        return tf.layers.dense(bottom, self.num_classes, name=name)
+    
+    def _reduce_mean(self, bottom, axes, name):
+        return tf.reduce_mean(bottom, axis=axes, keepdims=False, name=name)
+    
+    def _relu(self, bottom, name):
+        return tf.nn.relu(bottom)
+
+    def _bn(self, bottom, name=None):
+        bn = tf.layers.batch_normalization(
+            inputs=bottom,
+            axis=3 if self.data_format == 'channels_last' else 1,
+            training=self.is_training
+        )
+        return bn
+
+    def _conv_bn_activation(self, bottom, filters, kernel_size, strides, activation, name):
+        conv = tf.layers.conv2d(
+            inputs=bottom,
+            filters=filters,
+            kernel_size=kernel_size,
+            strides=strides,
+            padding='same',
+            data_format=self.data_format,
+            kernel_initializer=tf.contrib.layers.variance_scaling_initializer(),
+            name=name
+        )
+        bn = self._bn(conv)
+        if activation is not None:
+            return activation(bn)
+        else:
+            return bn
+
+    def _group_conv(self, bottom, filters, kernel_size, strides, activation, name):
+        total_conv = []
+        filters_per_path = filters // self.cardinality
+        axis = 3 if self.data_format == 'channels_last' else 1
+        for i in range(self.cardinality):
+            split_bottom = tf.gather(bottom, tf.range(i*self.cardinality, (i+1)*self.cardinality), axis=axis)
+            conv = self._conv_bn_activation(split_bottom, filters_per_path, kernel_size, strides, activation, name+'_'+str(i))
+            total_conv.append(conv)
+        axes = 3 if self.data_format == 'channels_last' else 1
+        total_conv = tf.concat(total_conv, axis=axes)
+        return total_conv
+
+    def _residual_bottleneck(self, bottom, filters, strides, activation, name):
+        with tf.variable_scope(name):
+            with tf.variable_scope('conv_branch'):
+                conv = self._conv_bn_activation(bottom, filters, 1, 1, tf.nn.relu, 'convbn_1')
+                conv = self._group_conv(conv, filters, 3, strides, tf.nn.relu, 'gconv_1')
+                conv = self._conv_bn_activation(conv, filters*2, 1, 1, activation, 'convbn_2')
+            with tf.variable_scope('identity_branch'):
+                shutcut = self._conv_bn_activation(bottom, filters*2, 1, strides, activation, 'convbn_3')
+            if self.is_SENet:
+                return self.squeeze_and_excitation(conv) + shutcut
+            else:
+                return conv + shutcut
+
+    # squeeze-and-excitation block
+    def squeeze_and_excitation(self, bottom):
+        axes = [2, 3] if self.data_format == 'channels_first' else [1, 2]
+        channels = bottom.get_shape()[1] if self.data_format == 'channels_first' else bottom.get_shape()[3]
+        average_pool = tf.reduce_mean(
+            input_tensor=bottom,
+            axis=axes,
+            keepdims=False,
+        )
+        fc_layer1 = tf.layers.dense(
+            inputs=average_pool,
+            units=int(channels // self.reduction),
+            activation=tf.nn.relu,
+        )
+        fc_layer2 = tf.layers.dense(
+            inputs=fc_layer1,
+            units=channels,
+            activation=tf.nn.sigmoid,
+        )
+        weight = tf.reshape(fc_layer2, [-1, 1, 1, channels])
+        scaled = weight * bottom
+        return scaled
+
+    def _max_pooling(self, bottom, pool_size, strides, name):
+        return tf.layers.max_pooling2d(
+            inputs=bottom,
+            pool_size=pool_size,
+            strides=strides,
+            padding='same',
+            data_format=self.data_format,
+            name=name
+        )
+
+    def _avg_pooling(self, bottom, pool_size, strides, name):
+        return tf.layers.average_pooling2d(
+            inputs=bottom,
+            pool_size=pool_size,
+            strides=strides,
+            padding='same',
+            data_format=self.data_format,
+            name=name
+        )
+
+    def _dropout(self, bottom, name):
+        return tf.layers.dropout(
+            inputs=bottom,
+            rate=self.prob,
+            training=self.is_training,
+            name=name
+        )
 
     def add_layer(self, input, layer, name, *args):
         args = list(args)
@@ -335,6 +548,8 @@ class ResNet(object):
         self.output = _in
         
     def single_stage_bp(self):
+        def classifer_loss(labels, final_dense):
+            return tf.losses.softmax_cross_entropy(labels, final_dense, label_smoothing=0.1, reduction=tf.losses.Reduction.MEAN)
         def myloss(g, a):
             return 0.5 * tf.math.multiply(tf.math.square(a), g)
         lossFn = classification_loss if self.isLast else myloss
@@ -346,3 +561,23 @@ class ResNet(object):
         apply = opt.apply_gradients(zip(grad[:-1], vars))
         
         return grad[-1], apply
+    
+    def get_var_count(self):
+        count = 0
+        for v in tf.trainable_variables():
+            count += reduce(lambda x, y: x * y, v.get_shape().as_list())
+        return count
+
+
+if __name__ == "__main__":
+    from sys import argv
+    if argv[1] == 'vgg':
+        v = Vgg19(2)
+        print("Vgg Size: {} MB".format(v.get_var_count() * 4 / 1024 / 1024.))
+    elif argv[1] == 'resnet':
+        r = ResNet(2)
+        print("Res Size: {} MB".format(r.get_var_count() * 4 / 1024 / 1024.))
+    elif argv[1] == 'resnext':
+        x = ResNeXt(2)
+        print("ReX Size: {} MB".format(x.get_var_count() * 4 / 1024 / 1024.))
+    

@@ -1,0 +1,9 @@
+========== Stats ==========
+iters 10
+batchSize 128
+numMicro 16
+machine 4
+log_dir _timeline/resnext
+file ./_partition/partition_2_resnext_128_16.txt
+model resnext
+===========================
